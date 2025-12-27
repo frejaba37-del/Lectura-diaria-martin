@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Lectura diaria para Martín Bautista</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    html{
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    body{
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    .ios-scroll { -webkit-overflow-scrolling: touch; }
+    .max-h-70dvh { max-height: 70dvh; }
+    .max-h-520dvh { max-height: min(520px, 60dvh); }
+
+    .kid-shadow { box-shadow: 0 10px 25px rgba(0,0,0,.10); }
+    .btn-bounce:active { transform: translateY(1px) scale(.99); }
+    button { touch-action: manipulation; }
+    @media (min-width: 768px) { #textoHistoria { font-size: 1.35rem; line-height: 1.85; } }
+    @media (min-width: 1024px){ #textoHistoria { font-size: 1.45rem; line-height: 1.90; } }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-sky-100 via-indigo-50 to-pink-50 text-slate-900">
+  <div class="max-w-5xl mx-auto p-4 md:p-8 space-y-4">
+
+    <!-- Aviso si localStorage falla en Safari (file:// o modo privado) -->
+    <div id="storageWarning" class="hidden kid-shadow rounded-3xl border border-amber-200 bg-amber-50 p-4">
+      <div class="text-lg font-black">⚠️ Aviso de Safari</div>
+      <div class="text-base font-semibold text-slate-700">
+        Safari ha bloqueado el guardado local en este modo (suele pasar al abrir el archivo desde “Archivos” o en modo privado).
+        La app funcionará, pero el diario podría no guardarse hasta que se abra como “Añadir a pantalla de inicio” o fuera de modo privado.
+      </div>
+    </div>
+
+    <!-- Aviso para iPhone Safari: Añadir a pantalla de inicio -->
+    <div id="iosInstallBox"
+         class="hidden kid-shadow rounded-3xl border border-blue-200 bg-blue-50 p-4">
+      <div class="text-xl font-black">📲 Mejor experiencia en iPhone</div>
+      <p class="mt-1 text-base font-semibold text-slate-700">
+        Para que el temporizador, los botones y el diario funcionen siempre bien en iPhone,
+        añade esta app a la pantalla de inicio.
+      </p>
+
+      <ol class="mt-2 list-decimal list-inside text-base font-semibold text-slate-700 space-y-1">
+        <li>Pulsa el botón <strong>Compartir</strong> de Safari</li>
+        <li>Elige <strong>“Añadir a pantalla de inicio”</strong></li>
+        <li>Abre la app desde el icono 📚</li>
+      </ol>
+
+      <div class="mt-3 rounded-2xl bg-white border border-blue-200 p-3 text-base font-semibold text-slate-700">
+        🔵 En Safari: busca el icono de <strong>Compartir</strong> (cuadrado con flecha ↑).
+      </div>
+
+      <button type="button" id="btnInstallHint"
+        class="mt-3 btn-bounce rounded-2xl bg-blue-600 text-white px-5 py-3 font-extrabold text-xl">
+        📲 Añadir a pantalla de inicio
+      </button>
+
+      <p class="mt-2 text-sm font-bold text-slate-600">
+        (Este botón no instala nada automáticamente, solo te recuerda cómo hacerlo)
+      </p>
+    </div>
+
+    <!-- HEADER -->
+    <header class="kid-shadow rounded-3xl bg-white/80 backdrop-blur border border-white p-5 md:p-7">
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-3xl md:text-4xl font-black tracking-tight break-words">
+            📚 Lectura diaria para Martín Bautista
+          </h1>
+          <p class="text-lg md:text-xl font-semibold text-slate-700 break-words">
+            📅 <span id="fechaHoy"></span>
+            <span class="ml-2">⏱️ Máximo: 15 minutos</span>
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 items-center">
+          <div class="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-2 font-bold text-amber-900">
+            ✅ Hoy: <span id="estadoHoy">—</span>
+          </div>
+          <button type="button" id="btnVerDiario"
+            class="btn-bounce rounded-2xl bg-slate-900 text-white px-4 py-2 font-extrabold text-lg hover:opacity-95">
+            📔 Ver diario
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="rounded-3xl bg-sky-50 border border-sky-200 p-4">
+          <div class="text-lg font-black">🎯 Objetivo</div>
+          <div class="text-2xl font-extrabold">Leer al menos 1 lectura hoy</div>
+          <div class="text-sm font-semibold text-slate-700">Puedes generar infinitas lecturas al día.</div>
+        </div>
+
+        <div class="rounded-3xl bg-indigo-50 border border-indigo-200 p-4">
+          <div class="text-lg font-black">⏱️ Temporizador</div>
+          <div class="text-2xl font-extrabold tabular-nums" id="timerDisplay">15:00</div>
+          <div class="text-sm font-semibold text-slate-700">Se inicia al generar una lectura nueva.</div>
+        </div>
+
+        <div class="rounded-3xl bg-pink-50 border border-pink-200 p-4">
+          <div class="text-lg font-black">🌟 Tip</div>
+          <div class="text-xl font-extrabold">Escribe frases completas</div>
+          <div class="text-sm font-semibold text-slate-700">Así mejoras vocabulario y ortografía ✍️</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- LECTURA -->
+      <section class="kid-shadow rounded-3xl bg-white/85 backdrop-blur border border-white p-5 md:p-7 space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-2xl md:text-3xl font-black">🧡 Lectura</h2>
+          <button type="button" id="btnNuevaHistoria"
+            class="btn-bounce rounded-2xl bg-emerald-600 text-white px-4 py-2 font-extrabold text-lg hover:bg-emerald-700">
+            🎲 Nueva lectura
+          </button>
+        </div>
+
+        <div class="rounded-3xl bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-200 p-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div class="text-xl font-black break-words" id="tituloHistoria">—</div>
+            <div class="text-sm font-bold text-slate-700">
+              🔖 Tema: <span id="temaHistoria">—</span>
+              <span class="ml-2">⏳ Estimado: <span id="tiempoEstimado">—</span></span>
+              <span class="ml-2">⏱️ Llevas: <span id="tiempoTranscurrido" class="tabular-nums">00:00</span></span>
+            </div>
+          </div>
+          <div class="mt-2 text-xs md:text-sm font-bold text-slate-600">
+            (Estimado según velocidad media. El transcurrido es tu tiempo real.)
+          </div>
+        </div>
+
+        <!-- BOTONES ANTES DE LA HISTORIA -->
+        <div class="rounded-3xl bg-white border border-slate-200 p-4 space-y-3">
+          <div class="flex flex-wrap gap-2 items-center">
+            <button type="button" id="btnIniciar"
+              class="btn-bounce rounded-2xl bg-indigo-700 text-white px-5 py-3 font-extrabold text-xl hover:bg-indigo-800">
+              ▶️ Iniciar (15:00)
+            </button>
+            <button type="button" id="btnPausar"
+              class="btn-bounce hidden rounded-2xl bg-slate-200 text-slate-900 px-5 py-3 font-extrabold text-xl hover:bg-slate-300">
+              ⏸️ Pausar
+            </button>
+            <button type="button" id="btnReiniciar"
+              class="btn-bounce rounded-2xl bg-white border border-slate-300 text-slate-900 px-5 py-3 font-extrabold text-xl hover:bg-slate-50">
+              🔄 Reiniciar
+            </button>
+            <span id="timerMsg" class="text-lg font-bold text-slate-700"></span>
+          </div>
+        </div>
+
+        <!-- HISTORIA -->
+        <article id="textoHistoria"
+          class="rounded-3xl bg-white border border-slate-200 p-4 md:p-5 text-lg md:text-xl leading-relaxed font-semibold text-slate-800 whitespace-pre-wrap break-words">
+          Pulsa “🎲 Nueva lectura” para comenzar.
+        </article>
+
+        <div class="rounded-3xl bg-white border border-slate-200 p-4">
+          <div class="text-lg md:text-xl font-black">📊 Comparación de tiempo</div>
+          <div class="mt-2 text-lg md:text-xl font-semibold text-slate-800">
+            ⏳ Estimado: <span class="font-black" id="tiempoEstimado2">—</span>
+            <span class="mx-2">•</span>
+            ⏱️ Transcurrido: <span class="font-black tabular-nums" id="tiempoTranscurrido2">00:00</span>
+          </div>
+        </div>
+
+        <div id="glosarioBox" class="hidden rounded-3xl bg-slate-50 border border-slate-200 p-4">
+          <div class="text-xl md:text-2xl font-black">📚 Mini glosario</div>
+          <p class="text-base md:text-lg font-semibold text-slate-700 mt-1">
+            Palabras elegidas al azar desde la lectura (definición offline).
+          </p>
+          <ul id="glosarioLista" class="mt-3 space-y-2 text-lg md:text-xl font-semibold"></ul>
+        </div>
+
+        <div class="rounded-3xl bg-indigo-50 border border-indigo-200 p-4 space-y-3">
+          <h3 class="text-xl md:text-2xl font-black">🧠 ¿Cuál crees que es la moraleja?</h3>
+          <p class="text-base md:text-lg font-semibold text-slate-700">
+            Escribe tu idea con buenas frases. Luego compara con la moraleja real.
+          </p>
+
+          <textarea id="inputMoralejaNino"
+            class="w-full rounded-2xl border border-indigo-200 bg-white p-3 md:p-4 text-lg md:text-xl font-semibold focus:outline-none focus:ring-4 focus:ring-indigo-200"
+            rows="4" placeholder="✍️ Escribe aquí tu moraleja..."></textarea>
+
+          <div class="flex flex-wrap gap-2 items-center">
+            <button type="button" id="btnGuardarYVer"
+              class="btn-bounce rounded-2xl bg-amber-500 text-white px-5 py-3 font-extrabold text-xl hover:bg-amber-600">
+              💾 Guardar y ver “Moraleja”
+            </button>
+
+            <button type="button" id="btnMoraleja"
+              class="btn-bounce hidden rounded-2xl bg-rose-600 text-white px-5 py-3 font-extrabold text-xl hover:bg-rose-700">
+              📌 Moraleja
+            </button>
+
+            <span id="saveMsg" class="text-base md:text-lg font-bold text-slate-700"></span>
+          </div>
+
+          <div id="moralejaBox" class="hidden rounded-3xl bg-white border border-rose-200 p-4">
+            <div class="text-xl md:text-2xl font-black">📌 Moraleja real</div>
+            <p class="mt-2 text-lg md:text-xl font-semibold text-slate-800 break-words" id="textoMoralejaReal"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- DIARIO -->
+      <section class="kid-shadow rounded-3xl bg-white/85 backdrop-blur border border-white p-5 md:p-7 space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-2xl md:text-3xl font-black">📔 Diario</h2>
+          <button type="button" id="btnExportar"
+            class="btn-bounce rounded-2xl bg-slate-900 text-white px-4 py-2 font-extrabold text-lg hover:opacity-95">
+            ⬇️ Exportar (TXT)
+          </button>
+        </div>
+
+        <div class="rounded-3xl bg-slate-50 border border-slate-200 p-4">
+          <div class="text-lg font-black">🗓️ Resumen rápido</div>
+          <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-2xl bg-white border border-slate-200 p-3">
+              <div class="font-black text-lg">✅ Lecturas hoy</div>
+              <div class="text-2xl font-extrabold" id="lecturasHoyCount">0</div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 p-3">
+              <div class="font-black text-lg">📚 Lecturas totales</div>
+              <div class="text-2xl font-extrabold" id="lecturasTotalCount">0</div>
+            </div>
+            <div class="rounded-2xl bg-white border border-slate-200 p-3">
+              <div class="font-black text-lg">📝 “Fallos” anotados</div>
+              <div class="text-2xl font-extrabold" id="fallosCount">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl bg-white border border-slate-200 overflow-hidden">
+          <div class="bg-slate-900 text-white px-4 py-3 font-black text-lg">
+            📖 Últimas entradas (fecha y hora)
+          </div>
+          <div id="listaEntradas" class="p-4 space-y-3 ios-scroll max-h-520dvh overflow-auto">
+            <p class="text-lg font-semibold text-slate-700">Aún no hay entradas guardadas.</p>
+          </div>
+        </div>
+
+        <button type="button" id="btnBorrarTodo"
+          class="btn-bounce w-full rounded-2xl bg-white border border-rose-300 text-rose-700 px-5 py-3 font-extrabold text-xl hover:bg-rose-50">
+          🧹 Borrar TODO (LocalStorage)
+        </button>
+
+        <p class="text-sm font-semibold text-slate-600">
+          🔐 Todo se guarda solo en este dispositivo (LocalStorage del navegador).
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal diario -->
+  <div id="modalDiario" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative max-w-3xl mx-auto mt-10 md:mt-16 p-4">
+      <div class="kid-shadow rounded-3xl bg-white border border-white p-5 md:p-7 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-2xl md:text-3xl font-black">📔 Diario completo</div>
+          <button type="button" id="btnCerrarDiario"
+            class="btn-bounce rounded-2xl bg-slate-900 text-white px-4 py-2 font-extrabold text-lg hover:opacity-95">
+            ✖️ Cerrar
+          </button>
+        </div>
+        <div class="rounded-3xl border border-slate-200 overflow-hidden">
+          <div class="bg-slate-900 text-white px-4 py-3 font-black text-lg">
+            🕒 Entradas guardadas
+          </div>
+          <div id="listaEntradasModal" class="p-4 space-y-3 ios-scroll max-h-70dvh overflow-auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  /* ========= Safe Storage (iOS Safari file:// / modo privado) ========= */
+  var memoryStore = {};
+  function storageAvailable(){
+    try{
+      var x = "__test__" + Date.now();
+      window.localStorage.setItem(x, x);
+      window.localStorage.removeItem(x);
+      return true;
+    }catch(e){
+      return false;
+    }
+  }
+  var hasLS = storageAvailable();
+  var SafeStorage = {
+    getItem: function(k){
+      try{ if(hasLS) return window.localStorage.getItem(k); }catch(e){}
+      return memoryStore.hasOwnProperty(k) ? memoryStore[k] : null;
+    },
+    setItem: function(k,v){
+      try{ if(hasLS) { window.localStorage.setItem(k, v); return; } }catch(e){}
+      memoryStore[k] = v;
+    },
+    removeItem: function(k){
+      try{ if(hasLS) { window.localStorage.removeItem(k); return; } }catch(e){}
+      delete memoryStore[k];
+    }
+  };
+
+  var storageWarning = document.getElementById("storageWarning");
+  if(!hasLS && storageWarning) storageWarning.classList.remove("hidden");
+
+  /* ========= Detección iOS Safari y aviso de instalación ========= */
+  (function(){
+    var ua = window.navigator.userAgent;
+    var isIOS = /iPad|iPhone|iPod/.test(ua);
+    var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+    var isStandalone = window.navigator.standalone === true;
+
+    var iosBox = document.getElementById("iosInstallBox");
+    if(isIOS && isSafari && !isStandalone && iosBox){
+      iosBox.classList.remove("hidden");
+    }
+
+    var btnInstallHint = document.getElementById("btnInstallHint");
+    if(btnInstallHint){
+      btnInstallHint.addEventListener("click", function(){
+        alert("En Safari:\n\n1) Pulsa el botón Compartir (⬆️)\n2) Elige “Añadir a pantalla de inicio”\n3) Abre desde el icono 📚");
+      });
+    }
+  })();
+
+  /* ========= Utilidades ========= */
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function isoDate(d){ return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); }
+  function prettyDateES(d){ return d.toLocaleDateString("es-ES",{weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
+  function nowISO(){
+    var d = new Date();
+    return isoDate(d)+" "+pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds());
+  }
+  function todayKey(){ return isoDate(new Date()); }
+  function uid(){ return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16); }
+  function escapeHtml(s){
+    s = String(s == null ? "" : s);
+    return s
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  }
+  function wordCount(text){
+    return String(text || "").trim().split(/\s+/).filter(Boolean).length;
+  }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+  function fmtTimer(secs){
+    var m = Math.floor(secs/60);
+    var s = secs%60;
+    return pad2(m)+":"+pad2(s);
+  }
+  function fnv1a(str){
+    var h = 0x811c9dc5;
+    for (var i=0; i<str.length; i++){
+      h ^= str.charCodeAt(i);
+      h = (h + ((h<<1) + (h<<4) + (h<<7) + (h<<8) + (h<<24))) >>> 0;
+    }
+    return ("00000000" + h.toString(16)).slice(-8);
+  }
+
+  /* ========= Local “DB” ========= */
+  var LS_KEY = "lectura_diaria_martin_bautista_v4";
+  var defaultData = { entries: [], misses: [], usedStoryHashes: [] };
+
+  function loadData(){
+    try{
+      var raw = SafeStorage.getItem(LS_KEY);
+      if(!raw) return JSON.parse(JSON.stringify(defaultData));
+      var p = JSON.parse(raw);
+      return {
+        entries: Array.isArray(p.entries) ? p.entries : [],
+        misses: Array.isArray(p.misses) ? p.misses : [],
+        usedStoryHashes: Array.isArray(p.usedStoryHashes) ? p.usedStoryHashes : []
+      };
+    }catch(e){
+      return JSON.parse(JSON.stringify(defaultData));
+    }
+  }
+  function saveData(data){
+    SafeStorage.setItem(LS_KEY, JSON.stringify(data));
+  }
+
+  var data = loadData();
+
+  /* ========= Diccionario (offline) ========= */
+  var DICT = {
+    "abandonar":"Dejar algo o a alguien.",
+    "abundante":"Que existe en gran cantidad.",
+    "acatar":"Obedecer una norma o decisión.",
+    "aclarar":"Explicar para que se entienda mejor.",
+    "acogedor":"Que hace sentir comodidad y seguridad.",
+    "actitud":"Forma de comportarse o reaccionar.",
+    "adaptarse":"Cambiar para ajustarse a una situación.",
+    "adversidad":"Situación difícil o problema.",
+    "afecto":"Cariño que se siente por alguien.",
+    "afinar":"Mejorar algo con cuidado y detalle.",
+    "agotamiento":"Cansancio muy fuerte.",
+    "alegoría":"Historia que enseña con símbolos.",
+    "alternativa":"Otra opción posible.",
+    "analizar":"Estudiar algo con atención.",
+    "anticipar":"Pensar en algo antes de que pase.",
+    "apaciguar":"Calmar una situación tensa.",
+    "apreciar":"Valorar la importancia de algo.",
+    "argumento":"Razón que apoya una idea.",
+    "armonía":"Buena relación y equilibrio.",
+    "asombro":"Sorpresa grande.",
+    "asumir":"Aceptar una responsabilidad.",
+    "atención":"Capacidad de concentrarse.",
+    "audaz":"Valiente para actuar.",
+    "autonomía":"Capacidad de actuar solo.",
+    "beneficio":"Resultado positivo o ventaja.",
+    "borrador":"Primera versión de un texto.",
+    "cauteloso":"Que actúa con cuidado.",
+    "celebrar":"Reconocer algo con alegría.",
+    "claridad":"Facilidad para entender algo.",
+    "colaborar":"Trabajar con otros para un fin.",
+    "complejidad":"Dificultad por tener muchas partes.",
+    "comprender":"Entender bien una idea.",
+    "concentración":"Atención mantenida en algo.",
+    "consecuencia":"Resultado de una acción.",
+    "constancia":"Continuar sin abandonar.",
+    "construir":"Crear algo poco a poco.",
+    "contundente":"Muy claro, difícil de negar.",
+    "contraste":"Diferencia clara entre dos cosas.",
+    "convicción":"Creencia firme.",
+    "cordial":"Amable y respetuoso.",
+    "criterio":"Capacidad de decidir bien.",
+    "cuestionar":"Preguntar para comprender o comprobar.",
+    "decisión":"Elección tomada.",
+    "deducir":"Sacar una conclusión con pistas.",
+    "deliberar":"Pensar antes de decidir.",
+    "demostrar":"Probar algo con hechos.",
+    "desafío":"Reto difícil.",
+    "desarrollar":"Hacer crecer una habilidad.",
+    "describir":"Explicar cómo es algo.",
+    "desenlace":"Final de una historia.",
+    "desigual":"Que no es equitativo o parejo.",
+    "destacar":"Sobresalir o llamar la atención.",
+    "detallado":"Con muchos detalles.",
+    "determinación":"Decisión firme de lograr algo.",
+    "diligente":"Que trabaja con cuidado y constancia.",
+    "disciplina":"Capacidad de seguir reglas o un plan.",
+    "discernir":"Distinguir diferencias con atención.",
+    "discreto":"Que actúa con prudencia, sin llamar atención.",
+    "disposición":"Actitud para hacer algo.",
+    "diversidad":"Variedad de cosas o ideas.",
+    "elocuente":"Que se expresa con claridad y fuerza.",
+    "empatía":"Ponerse en el lugar del otro.",
+    "enfocar":"Dirigir la atención hacia algo.",
+    "entusiasmo":"Ganas y energía por hacer algo.",
+    "equilibrio":"Estado estable entre partes.",
+    "esencial":"Lo más importante.",
+    "esfuerzo":"Energía usada para lograr algo.",
+    "estrategia":"Plan para conseguir un objetivo.",
+    "evidencia":"Prueba que apoya una idea.",
+    "exigir":"Pedir con firmeza.",
+    "explicar":"Hacer comprensible algo.",
+    "extraordinario":"Fuera de lo común.",
+    "fascinante":"Muy interesante.",
+    "fortalecer":"Hacer más fuerte.",
+    "frustración":"Molestia por no lograr algo.",
+    "fundamento":"Base que sostiene una idea.",
+    "generosidad":"Deseo de ayudar y compartir.",
+    "habilidad":"Capacidad para hacer algo bien.",
+    "honestidad":"Decir la verdad y actuar con transparencia.",
+    "hipótesis":"Idea que se prueba para ver si es cierta.",
+    "imparcial":"Que no toma partido.",
+    "impulsivo":"Que actúa sin pensar mucho.",
+    "inquietud":"Preocupación o nervios.",
+    "íntegro":"Honesto y correcto.",
+    "interpretar":"Entender el significado de algo.",
+    "investigar":"Buscar información para entender mejor.",
+    "justicia":"Actuar de forma correcta y equitativa.",
+    "lealtad":"Fidelidad y compromiso.",
+    "matizar":"Explicar con más detalle o precisión.",
+    "meticuloso":"Muy cuidadoso con los detalles.",
+    "moderación":"Evitar excesos.",
+    "motivar":"Dar ganas o razones para actuar.",
+    "objetivo":"Meta que se quiere alcanzar.",
+    "observar":"Mirar con atención para notar detalles.",
+    "optimista":"Que espera resultados buenos.",
+    "organizar":"Ordenar ideas o cosas.",
+    "paciencia":"Capacidad de esperar sin enfadarse.",
+    "perspicaz":"Que entiende rápido.",
+    "persistir":"Seguir intentando, no rendirse.",
+    "plantear":"Proponer una idea o problema.",
+    "precaución":"Cuidado para evitar daños.",
+    "preciso":"Exacto, sin error.",
+    "prioridad":"Lo más importante primero.",
+    "prudente":"Que piensa antes de actuar.",
+    "reflexión":"Pensar con calma para comprender mejor.",
+    "reconciliarse":"Volver a estar bien tras un problema.",
+    "reconocer":"Admitir un error o notar algo importante.",
+    "resiliencia":"Capacidad de recuperarse tras dificultades.",
+    "responsabilidad":"Cumplir deberes y aceptar consecuencias.",
+    "sereno":"Tranquilo y calmado.",
+    "solidaridad":"Ayudar a otros cuando lo necesitan.",
+    "sugerencia":"Idea propuesta para ayudar.",
+    "tenaz":"Que no se rinde.",
+    "tolerancia":"Respeto a diferencias.",
+    "valentía":"Actuar aunque haya miedo.",
+    "verificar":"Comprobar si algo es cierto."
+  };
+
+  function fallbackDefinition(){
+    return "Palabra interesante. Intenta usarla en una frase y deduce su sentido por el contexto.";
+  }
+
+  /* ========= Glosario desde el texto ========= */
+  var STOPWORDS = new Set([
+    "a","al","algo","algunas","algunos","allí","ante","antes","aquí","así","aunque","bajo","bien","cada","casi","como","con",
+    "contra","cual","cuando","de","del","desde","donde","dos","el","ella","ellas","ellos","en","entre","era","ese","eso","esta","estaba",
+    "este","esto","fue","ha","hace","hacia","han","hasta","hay","la","las","le","les","lo","los","más","me","mi","mientras",
+    "muy","ni","no","nos","o","para","pero","por","porque","que","se","ser","sin","sobre","su","sus","también","tan","te","tenía","tiene",
+    "todo","todos","tu","un","una","uno","unos","y","ya"
+  ]);
+
+  function normalizeWord(w){
+    return String(w || "")
+      .toLowerCase()
+      .replace(/[“”"']/g,"")
+      .replace(/[.,;:!?¿¡(){}\[\]<>]/g,"")
+      .replace(/^[^a-záéíóúñü]+|[^a-záéíóúñü]+$/g,"")
+      .trim();
+  }
+  function extractCandidateWords(story){
+    var tokens = String(story||"").split(/\s+/).map(normalizeWord).filter(Boolean);
+    var uniq = new Set();
+    for(var i=0;i<tokens.length;i++){
+      var t = tokens[i];
+      if(t.length < 7) continue;
+      if(STOPWORDS.has(t)) continue;
+      if(/^\d+$/.test(t)) continue;
+      uniq.add(t);
+    }
+    return Array.from(uniq);
+  }
+  function pickRandomUnique(arr, n){
+    var copy = arr.slice();
+    for (var i = copy.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+    }
+    return copy.slice(0, Math.min(n, copy.length));
+  }
+  function buildGlossaryFromStory(story, count){
+    if(count == null) count = 5;
+    var candidates = extractCandidateWords(story);
+    var chosen = pickRandomUnique(candidates, 14);
+    var withDefs = [];
+    for(var i=0;i<chosen.length;i++){
+      var w = chosen[i];
+      var def = DICT[w] || fallbackDefinition(w);
+      withDefs.push({ w:w, d:def });
+      if(withDefs.length >= count) break;
+    }
+    return withDefs;
+  }
+
+  /* ========= Generador (10–15 min) ========= */
+  var themes = [
+    { theme: "Amistad 🤝", moral: "La amistad crece cuando escuchas, compartes y cuidas a los demás." },
+    { theme: "Esfuerzo 💪", moral: "Con práctica y paciencia, lo que hoy cuesta mañana se vuelve posible." },
+    { theme: "Honestidad 🧼", moral: "Decir la verdad construye confianza y te hace más fuerte por dentro." },
+    { theme: "Respeto 🫶", moral: "Respetar a otros y a ti mismo hace que todos se sientan seguros y valiosos." },
+    { theme: "Valentía 🦁", moral: "Ser valiente no es no tener miedo, es actuar con cuidado aunque exista miedo." },
+    { theme: "Gratitud 🙏", moral: "Agradecer lo bueno te ayuda a ver lo que sí tienes y a ser más feliz." },
+    { theme: "Responsabilidad 🎒", moral: "Cumplir tus deberes te da libertad y confianza en ti mismo." },
+    { theme: "Bondad 🌈", moral: "Un acto pequeño de bondad puede mejorar el día de alguien muchísimo." }
+  ];
+  var characters = ["Martín 🧒","Luna 🐶","Rayo 🐱","Tomás 🧑‍🤝‍🧑","Sofi 👧","Nico 🧑","La abuela Ana 👵","El profe Leo 👨‍🏫"];
+  var places = ["en un parque con columpios 🌳","en la biblioteca 📚","en el patio del colegio 🏫","en la playa 🏖️","en un barrio colorido 🏘️","en una montaña 🏔️","en un museo 🏛️","en una tienda de juguetes 🧸"];
+  var objects = ["una brújula antigua 🧭","un cuaderno encuadernado 📓","una llave diminuta 🔑","una caja de acuarelas 🎨","un balón gastado ⚽","un reloj de arena ⏳","un mapa arrugado 🗺️","una mochila resistente 🎒"];
+  var problems = [
+    "alguien se sintió excluido 😔","perdieron algo importante 😟","hubo un malentendido 🤔","tenían miedo de intentarlo 😬",
+    "se enojaron por una tontería 😤","querían rendirse demasiado pronto 🫣","tenían que elegir entre lo fácil y lo correcto ⚖️",
+    "nadie quería pedir perdón primero 🙈"
+  ];
+  var resolutions = [
+    "hablaron con calma y escucharon de verdad 👂","pidieron ayuda a tiempo y trabajaron en equipo 🧩","hicieron un plan paso a paso y lo siguieron ✅",
+    "dijeron la verdad aunque daba vergüenza 🧼","compartieron y se turnaron con paciencia 🔁","pidieron perdón y se abrazaron 🤗",
+    "ayudaron a quien lo necesitaba sin esperar nada 🌟","practicaron un poquito cada día hasta lograrlo 📈"
+  ];
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  var READING_WPM = 130;
+  var MIN_MINUTES = 10;
+  var MAX_MINUTES = 15;
+  var beats = ["planteamiento","incidente","búsqueda","duda","aprendizaje","decisión","clímax","cierre"];
+
+  function buildStoryText(){
+    var t = pick(themes);
+    var c1 = pick(characters);
+    var c2 = pick(characters);
+    if(c2 === c1) c2 = pick(characters);
+
+    var place = pick(places);
+    var obj = pick(objects);
+    var prob = pick(problems);
+    var res = pick(resolutions);
+
+    var title = "✨ " + c1 + " y " + obj;
+    var theme = t.theme;
+
+    var minWords = Math.round(READING_WPM * MIN_MINUTES);
+    var maxWords = Math.round(READING_WPM * MAX_MINUTES);
+    var targetWords = Math.floor(minWords + Math.random() * (maxWords - minWords + 1));
+
+    var intro = [
+      c1 + " estaba " + place + ". La tarde tenía un aire especial: no por algo mágico, sino por esa sensación sutil de que cualquier detalle puede volverse importante si uno observa con atención.",
+      "Cerca de un banco, apareció " + obj + ". No brillaba como en los cuentos, pero parecía haber viajado por manos distintas; esa idea despertó curiosidad y, al mismo tiempo, prudencia.",
+      "A los pocos minutos llegó " + c2 + ". “No sé por qué, pero siento que esto nos está invitando a pensar”, dijo en voz baja, como si temiera romper el silencio con una palabra demasiado fuerte."
+    ];
+
+    function buildParagraph(beat){
+      var v = {
+        planteamiento:[
+          "Decidieron no precipitarse. En lugar de actuar por impulso, se sentaron a organizar ideas y a describir con calma lo que cada uno veía y sentía, sin burlas ni interrupciones.",
+          "Hablaron de lo que les había pasado en el colegio: a veces una frase mal dicha crea un desacuerdo; en cambio, una explicación clara puede evitar una consecuencia incómoda."
+        ],
+        incidente:[
+          "Entonces apareció el problema: " + prob + ". No fue un desastre enorme, pero sí suficiente para tensar el ánimo y poner a prueba su paciencia.",
+          c2 + " apretó los labios. “Esto va a acabar mal”, murmuró. " + c1 + " notó inquietud: esa mezcla de prisa y nervios que empuja a resolverlo todo sin pensar."
+        ],
+        búsqueda:[
+          "En vez de discutir, hicieron algo inteligente: buscaron argumentos y contraargumentos. “Yo digo mi idea y tú la matizas”, propuso " + c1 + ". Sonó serio, pero ayudó.",
+          "Separaron lo urgente de lo importante. A veces la solución no es rápida; es una resolución construida paso a paso, con constancia y disciplina."
+        ],
+        duda:[
+          "La duda llegó como una nube pequeña. “¿Y si nos equivocamos?”, preguntó " + c2 + ". " + c1 + " respiró: equivocarse también enseña si uno revisa lo que hizo y aprende.",
+          "Tuvieron que hablar con respeto incluso cuando estaban molestos. La voz podía ser puente… o pared. Eligieron el puente."
+        ],
+        aprendizaje:[
+          c1 + " comprendió algo: la responsabilidad se demuestra con detalles. Esperar turno. Reconocer errores. Escuchar hasta el final sin interrumpir.",
+          c2 + " se volvió más sereno. No porque el problema desapareciera, sino porque aprendió a mirarlo con calma, como si el tiempo se estirara para darles espacio."
+        ],
+        decisión:[
+          "Llegó la decisión difícil: escoger lo correcto aunque no fuera lo más cómodo. “Hagámoslo bien, aunque cueste”, dijo " + c1 + " con determinación.",
+          "Usaron " + obj + " como símbolo. Cada vez que se impacientaban, lo miraban y recordaban el plan. Parecía una tontería… hasta que empezó a funcionar."
+        ],
+        clímax:[
+          "La situación se tensó. Hubo un instante en el que cualquier palabra podía encender una pelea… o abrir una puerta.",
+          "Entonces, " + res + ". No fue perfecto, pero fue real. Y lo real enseña: uno tropieza, respira, corrige y vuelve a intentar."
+        ],
+        cierre:[
+          "El ambiente cambió, como cuando una habitación se ventila y todo se vuelve más ligero. " + c2 + " sonrió: “Creo que nos entendimos de verdad”.",
+          c1 + " guardó una idea final: mejorar no es un gesto heroico; es una costumbre. Y las costumbres, como la lectura, se construyen un día a la vez."
+        ]
+      };
+      var arr = v[beat] || v.planteamiento;
+      var p1 = pick(arr), p2 = pick(arr);
+      var p3 = (Math.random() < 0.45) ? pick(arr) : "";
+      return [p1,p2,p3].filter(Boolean).join(" ");
+    }
+
+    var paragraphs = [];
+    paragraphs = paragraphs.concat(intro);
+    paragraphs.push("");
+
+    while(wordCount(paragraphs.join("\n\n")) < targetWords){
+      var b = pick(beats);
+      paragraphs.push(buildParagraph(b));
+      if(Math.random() < 0.40){
+        paragraphs.push("—" + c2 + ": “¿Y si probamos otra manera, sin gritar?”\n—" + c1 + ": “Sí. Si nos equivocamos, lo corregimos. Eso también es aprender.”");
+      }
+      paragraphs.push("");
+      if(wordCount(paragraphs.join("\n\n")) > targetWords + 180) break;
+    }
+
+    paragraphs.push("Al despedirse, " + c1 + " sintió un orgullo sereno: no por “ganar”, sino por haberse comportado con respeto y cabeza fría. Esa noche pensó que leer y pensar se parecen: ambos te enseñan a elegir mejor tus palabras. 📚✨");
+
+    var story = paragraphs.join("\n\n").trim();
+    var estimatedMinutes = clamp(Math.round(wordCount(story) / READING_WPM), MIN_MINUTES, MAX_MINUTES);
+    return { title:title, theme:theme, story:story, realMoral:t.moral, estimatedMinutes:estimatedMinutes };
+  }
+
+  function generateUniqueReading(){
+    var used = new Set(data.usedStoryHashes);
+    for(var i=0;i<80;i++){
+      var base = buildStoryText();
+      var realHash = fnv1a(base.story);
+      if(used.has(realHash)) continue;
+
+      var glossary = buildGlossaryFromStory(base.story, 5);
+      data.usedStoryHashes.push(realHash);
+      saveData(data);
+
+      base.glossary = glossary;
+      base.storyHash = realHash;
+      base.generatedAt = nowISO();
+      return base;
+    }
+    var b2 = buildStoryText();
+    b2.story = b2.story + "\n\n(Nota: Lectura única #" + uid().slice(0,6) + ")";
+    b2.storyHash = fnv1a(b2.story);
+    b2.glossary = buildGlossaryFromStory(b2.story, 5);
+    data.usedStoryHashes.push(b2.storyHash);
+    saveData(data);
+    b2.generatedAt = nowISO();
+    return b2;
+  }
+
+  /* ========= DOM ========= */
+  var elFechaHoy = document.getElementById("fechaHoy");
+  var elEstadoHoy = document.getElementById("estadoHoy");
+  var elTimerDisplay = document.getElementById("timerDisplay");
+  var elTituloHistoria = document.getElementById("tituloHistoria");
+  var elTemaHistoria = document.getElementById("temaHistoria");
+  var elTextoHistoria = document.getElementById("textoHistoria");
+  var elTiempoEstimado = document.getElementById("tiempoEstimado");
+  var elTiempoEstimado2 = document.getElementById("tiempoEstimado2");
+  var elTiempoTranscurrido = document.getElementById("tiempoTranscurrido");
+  var elTiempoTranscurrido2 = document.getElementById("tiempoTranscurrido2");
+
+  var glosarioBox = document.getElementById("glosarioBox");
+  var glosarioLista = document.getElementById("glosarioLista");
+
+  var btnNuevaHistoria = document.getElementById("btnNuevaHistoria");
+  var btnIniciar = document.getElementById("btnIniciar");
+  var btnPausar = document.getElementById("btnPausar");
+  var btnReiniciar = document.getElementById("btnReiniciar");
+  var elTimerMsg = document.getElementById("timerMsg");
+
+  var inputMoralejaNino = document.getElementById("inputMoralejaNino");
+  var btnGuardarYVer = document.getElementById("btnGuardarYVer");
+  var btnMoraleja = document.getElementById("btnMoraleja");
+  var moralejaBox = document.getElementById("moralejaBox");
+  var elMoralejaReal = document.getElementById("textoMoralejaReal");
+  var elSaveMsg = document.getElementById("saveMsg");
+
+  var lecturasHoyCount = document.getElementById("lecturasHoyCount");
+  var lecturasTotalCount = document.getElementById("lecturasTotalCount");
+  var fallosCount = document.getElementById("fallosCount");
+  var listaEntradas = document.getElementById("listaEntradas");
+
+  var btnExportar = document.getElementById("btnExportar");
+  var btnBorrarTodo = document.getElementById("btnBorrarTodo");
+
+  var btnVerDiario = document.getElementById("btnVerDiario");
+  var modalDiario = document.getElementById("modalDiario");
+  var btnCerrarDiario = document.getElementById("btnCerrarDiario");
+  var listaEntradasModal = document.getElementById("listaEntradasModal");
+
+  var currentStory = {
+    title:"—", theme:"—",
+    story:"Pulsa “🎲 Nueva lectura” para comenzar.",
+    realMoral:"",
+    estimatedMinutes:null,
+    glossary:[],
+    storyHash:"",
+    generatedAt:""
+  };
+
+  /* ========= Timer ========= */
+  var timerSeconds = 15*60;
+  var timerRunning = false;
+  var timerInterval = null;
+  var elapsedSeconds = 0;
+
+  function updateElapsedUI(){
+    var txt = fmtTimer(elapsedSeconds);
+    elTiempoTranscurrido.textContent = txt;
+    elTiempoTranscurrido2.textContent = txt;
+  }
+  function stopTimer(){
+    timerRunning = false;
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+  function resetTimer(){
+    stopTimer();
+    timerSeconds = 15*60;
+    elTimerDisplay.textContent = fmtTimer(timerSeconds);
+    elTimerMsg.textContent = "";
+    btnIniciar.classList.remove("hidden");
+    btnPausar.classList.add("hidden");
+    elapsedSeconds = 0;
+    updateElapsedUI();
+  }
+  function startTimer(){
+    if(timerRunning) return;
+    timerRunning = true;
+    btnIniciar.classList.add("hidden");
+    btnPausar.classList.remove("hidden");
+    elTimerMsg.textContent = "⏳ ¡A leer! Tú puedes 😄";
+
+    timerInterval = setInterval(function(){
+      timerSeconds = Math.max(0, timerSeconds-1);
+      elapsedSeconds += 1;
+      updateElapsedUI();
+      elTimerDisplay.textContent = fmtTimer(timerSeconds);
+
+      if(timerSeconds<=0){
+        stopTimer();
+        btnPausar.classList.add("hidden");
+        btnIniciar.classList.remove("hidden");
+        elTimerMsg.textContent = "⏰ ¡Se acabó el tiempo! Puedes guardar tu moraleja 😊";
+      }
+    }, 1000);
+  }
+
+  /* ========= UI ========= */
+  function todaysEntries(){
+    var td = todayKey();
+    return data.entries.filter(function(e){ return e.date === td; });
+  }
+  function setTodayStatus(){
+    var count = todaysEntries().length;
+    elEstadoHoy.textContent = (count > 0) ? ("Sí ("+count+") 🎉") : "No 😴";
+  }
+  function renderCounts(){
+    lecturasHoyCount.textContent = String(todaysEntries().length);
+    lecturasTotalCount.textContent = String(data.entries.length);
+    fallosCount.textContent = String(data.misses.length);
+    setTodayStatus();
+  }
+
+  function entryCard(e){
+    var est = e.estimatedMinutes ? ("⏳ "+e.estimatedMinutes+" min") : "";
+    var elapsed = (e.elapsedSeconds != null) ? ("⏱️ "+fmtTimer(e.elapsedSeconds)) : "";
+    var gloss = (Array.isArray(e.glossary) && e.glossary.length)
+      ? e.glossary.map(function(g){ return "• "+g.w+": "+g.d; }).join("\n")
+      : "";
+
+    return `
+      <div class="rounded-3xl border border-slate-200 bg-white p-4">
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-lg md:text-xl font-black break-words">
+              🕒 ${e.date} — ${e.time}
+              <span class="ml-2 text-slate-600">${escapeHtml(est)}</span>
+              <span class="ml-2 text-slate-600">${escapeHtml(elapsed)}</span>
+            </div>
+            <div class="mt-1 text-xl md:text-2xl font-extrabold break-words">${escapeHtml(e.title)}</div>
+            <div class="mt-1 text-base md:text-lg font-bold text-slate-700 break-words">🔖 ${escapeHtml(e.theme)}</div>
+          </div>
+          <div class="rounded-2xl bg-emerald-50 border border-emerald-200 px-3 py-2 font-black">
+            ✅ Lectura guardada
+          </div>
+        </div>
+
+        <details class="mt-3">
+          <summary class="cursor-pointer font-black text-lg">📖 Ver lectura</summary>
+          <p class="mt-2 text-lg font-semibold text-slate-800 whitespace-pre-wrap break-words">${escapeHtml(e.story)}</p>
+        </details>
+
+        ${gloss ? `
+        <details class="mt-2">
+          <summary class="cursor-pointer font-black text-lg">📚 Mini glosario</summary>
+          <p class="mt-2 text-lg font-semibold text-slate-800 whitespace-pre-wrap break-words">${escapeHtml(gloss)}</p>
+        </details>` : ""}
+
+        <details class="mt-2">
+          <summary class="cursor-pointer font-black text-lg">🧠 Moraleja de Martín</summary>
+          <p class="mt-2 text-lg font-semibold text-slate-800 whitespace-pre-wrap break-words">${escapeHtml(e.kidMoral)}</p>
+        </details>
+
+        <details class="mt-2">
+          <summary class="cursor-pointer font-black text-lg">📌 Moraleja real</summary>
+          <p class="mt-2 text-lg font-semibold text-slate-800 whitespace-pre-wrap break-words">${escapeHtml(e.realMoral)}</p>
+        </details>
+      </div>
+    `;
+  }
+
+  function renderEntries(){
+    var items = data.entries.slice().sort(function(a,b){
+      return (b.date+" "+b.time).localeCompare(a.date+" "+a.time);
+    });
+    var html = [];
+    if(items.length === 0){
+      html.push('<p class="text-lg font-semibold text-slate-700">Aún no hay entradas guardadas.</p>');
+    }else{
+      html.push('<div class="text-xl font-black mt-2">📚 Lecturas guardadas</div>');
+      html.push(items.slice(0,30).map(entryCard).join(""));
+    }
+    listaEntradas.innerHTML = html.join("");
+  }
+
+  function renderEntriesModal(){
+    var items = data.entries.slice().sort(function(a,b){
+      return (b.date+" "+b.time).localeCompare(a.date+" "+a.time);
+    });
+    if(items.length === 0){
+      listaEntradasModal.innerHTML = '<p class="text-lg font-semibold text-slate-700">Aún no hay entradas guardadas.</p>';
+      return;
+    }
+    listaEntradasModal.innerHTML = items.map(entryCard).join("");
+  }
+
+  function showStory(st){
+    currentStory = st;
+
+    elTituloHistoria.textContent = st.title;
+    elTemaHistoria.textContent = st.theme;
+    elTextoHistoria.textContent = st.story;
+
+    elTiempoEstimado.textContent = st.estimatedMinutes ? (st.estimatedMinutes+" min") : "—";
+    elTiempoEstimado2.textContent = st.estimatedMinutes ? (st.estimatedMinutes+" min") : "—";
+
+    elapsedSeconds = 0;
+    updateElapsedUI();
+
+    if(Array.isArray(st.glossary) && st.glossary.length){
+      glosarioLista.innerHTML = st.glossary.map(function(g){
+        return `
+          <li class="rounded-2xl bg-white border border-slate-200 p-3">
+            <span class="font-black">✨ ${escapeHtml(g.w)}</span>
+            <span class="text-slate-700 font-semibold"> — ${escapeHtml(g.d)}</span>
+          </li>
+        `;
+      }).join("");
+      glosarioBox.classList.remove("hidden");
+    }else{
+      glosarioBox.classList.add("hidden");
+      glosarioLista.innerHTML = "";
+    }
+
+    inputMoralejaNino.value = "";
+    btnMoraleja.classList.add("hidden");
+    moralejaBox.classList.add("hidden");
+    elMoralejaReal.textContent = "";
+    elSaveMsg.textContent = "";
+  }
+
+  function saveReadingAndReveal(){
+    stopTimer();
+    btnPausar.classList.add("hidden");
+    btnIniciar.classList.remove("hidden");
+    elTimerMsg.textContent = "⏹️ Temporizador detenido. ¡Entrada guardada!";
+
+    if(!currentStory || !currentStory.realMoral){
+      elSaveMsg.textContent = "Primero genera una lectura con 🎲 Nueva lectura.";
+      return;
+    }
+    var kidMoral = (inputMoralejaNino.value || "").trim();
+    if(!kidMoral){
+      elSaveMsg.textContent = "Escribe tu moraleja antes de verla ✍️🙂";
+      return;
+    }
+
+    var d = new Date();
+    var entry = {
+      id: uid(),
+      date: isoDate(d),
+      time: pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds()),
+      title: currentStory.title,
+      theme: currentStory.theme,
+      story: currentStory.story,
+      kidMoral: kidMoral,
+      realMoral: currentStory.realMoral,
+      estimatedMinutes: currentStory.estimatedMinutes || null,
+      glossary: Array.isArray(currentStory.glossary) ? currentStory.glossary : [],
+      elapsedSeconds: elapsedSeconds,
+      storyHash: currentStory.storyHash || ""
+    };
+
+    data.entries.push(entry);
+    saveData(data);
+
+    btnMoraleja.classList.remove("hidden");
+    moralejaBox.classList.remove("hidden");
+    elMoralejaReal.textContent = currentStory.realMoral;
+
+    elSaveMsg.textContent = "✅ Guardado en el diario. ¡Muy bien! 🎉";
+    renderCounts();
+    renderEntries();
+  }
+
+  function revealMoralOnly(){
+    if(!currentStory || !currentStory.realMoral) return;
+    moralejaBox.classList.remove("hidden");
+    elMoralejaReal.textContent = currentStory.realMoral;
+  }
+
+  function exportTXT(){
+    var lines = [];
+    lines.push("📚 Lectura diaria para Martín Bautista");
+    lines.push("=====================================");
+    lines.push("");
+
+    if(data.entries.length){
+      lines.push("📖 Lecturas:");
+      data.entries.slice().sort(function(a,b){
+        return (b.date+" "+b.time).localeCompare(a.date+" "+a.time);
+      }).forEach(function(e){
+        lines.push("- "+e.date+" "+e.time+" "+(e.estimatedMinutes ? "(~"+e.estimatedMinutes+" min)" : "")+" "+(e.elapsedSeconds!=null ? "(real "+fmtTimer(e.elapsedSeconds)+")" : ""));
+        lines.push("  Título: "+e.title);
+        lines.push("  Tema: "+e.theme);
+        if(Array.isArray(e.glossary) && e.glossary.length){
+          lines.push("  Mini glosario:");
+          e.glossary.forEach(function(g){ lines.push("   - "+g.w+": "+g.d); });
+        }
+        lines.push("  Historia:");
+        lines.push(e.story);
+        lines.push("  Moraleja de Martín:");
+        lines.push(e.kidMoral);
+        lines.push("  Moraleja real:");
+        lines.push(e.realMoral);
+        lines.push("");
+        lines.push("-------------------------------------");
+        lines.push("");
+      });
+    }
+
+    var blob = new Blob([lines.join("\n")], {type:"text/plain;charset=utf-8"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "diario-lectura-martin.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function borrarTodo(){
+    if(!confirm("¿Seguro que quieres borrar TODO el diario y el registro de lecturas usadas?")) return;
+    SafeStorage.removeItem(LS_KEY);
+    data = loadData();
+    renderCounts();
+    renderEntries();
+    resetTimer();
+    showStory({
+      title:"—", theme:"—",
+      story:"Pulsa “🎲 Nueva lectura” para comenzar.",
+      realMoral:"", estimatedMinutes:null, glossary:[],
+      storyHash:"", generatedAt:""
+    });
+  }
+
+  /* ========= Eventos ========= */
+  btnNuevaHistoria.addEventListener("click", function(){
+    var r = generateUniqueReading();
+    showStory(r);
+    resetTimer();
+    startTimer();
+  });
+  btnIniciar.addEventListener("click", startTimer);
+  btnPausar.addEventListener("click", function(){
+    stopTimer();
+    btnPausar.classList.add("hidden");
+    btnIniciar.classList.remove("hidden");
+    elTimerMsg.textContent = "⏸️ Pausado. Cuando quieras, continúa 🙂";
+  });
+  btnReiniciar.addEventListener("click", function(){
+    resetTimer();
+    elTimerMsg.textContent = "🔄 Reiniciado. Cuando estés listo, inicia otra vez 🙂";
+  });
+  btnGuardarYVer.addEventListener("click", saveReadingAndReveal);
+  btnMoraleja.addEventListener("click", revealMoralOnly);
+  btnExportar.addEventListener("click", exportTXT);
+  btnBorrarTodo.addEventListener("click", borrarTodo);
+
+  btnVerDiario.addEventListener("click", function(){
+    renderEntriesModal();
+    modalDiario.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  });
+  btnCerrarDiario.addEventListener("click", function(){
+    modalDiario.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  });
+  modalDiario.addEventListener("click", function(e){
+    if(e.target === modalDiario){
+      modalDiario.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    }
+  });
+
+  /* ========= Init ========= */
+  elFechaHoy.textContent = prettyDateES(new Date());
+  elTimerDisplay.textContent = fmtTimer(15*60);
+  updateElapsedUI();
+  renderCounts();
+  renderEntries();
+
+});
+</script>
+</body>
+</html>
